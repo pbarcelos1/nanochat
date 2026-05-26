@@ -28,7 +28,7 @@ import argparse
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-from datasets import load_dataset
+from datasets import load_dataset  # noqa: F401 (used in download_shards)
 
 from nanochat.common import get_base_dir
 
@@ -59,6 +59,27 @@ def list_parquet_files_hf(data_dir=None):
     )
     assert parquet_files, f"No parquet shards found in {data_dir}"
     return [os.path.join(data_dir, f) for f in parquet_files]
+
+
+def parquets_iter_batched_hf(split, start=0, step=1, data_dir=None):
+    """
+    Same interface as nanochat.dataset.parquets_iter_batched but reads from
+    the HF fineweb-2/por_Latn shards.  Used by tok_train.py and tok_eval.py
+    so they don't need to import from nanochat.dataset at all.
+
+    split="train" → all shards except the last (validation) shard.
+    split="val"   → last shard only.
+    start/step    → row-group-level DDP sharding (start=rank, step=world_size).
+    """
+    assert split in ("train", "val"), "split must be 'train' or 'val'"
+    parquet_paths = list_parquet_files_hf(data_dir=data_dir)
+    parquet_paths = parquet_paths[:-1] if split == "train" else parquet_paths[-1:]
+    for filepath in parquet_paths:
+        pf = pq.ParquetFile(filepath)
+        for rg_idx in range(start, pf.num_row_groups, step):
+            rg = pf.read_row_group(rg_idx)
+            texts = rg.column('text').to_pylist()
+            yield texts
 
 
 def _write_shard(shard_idx, docs, data_dir):

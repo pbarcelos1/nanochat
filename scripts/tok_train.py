@@ -17,7 +17,10 @@ parser = argparse.ArgumentParser(description='Train a BPE tokenizer')
 parser.add_argument('--max-chars', type=int, default=2_000_000_000, help='Maximum characters to train on (default: 2B)')
 parser.add_argument('--doc-cap', type=int, default=10_000, help='Maximum characters per document (default: 10,000)')
 parser.add_argument('--vocab-size', type=int, default=32768, help='Vocabulary size (default: 32768 = 2^15)')
+parser.add_argument('--dataset', type=str, default='upstream', choices=['upstream', 'hf'],
+                    help='Dataset source: upstream (default, ClimbMix/FinewebEdu) or hf (fineweb-2/por_Latn)')
 args = parser.parse_args()
+print(f"dataset: {args.dataset}")
 print(f"max_chars: {args.max_chars:,}")
 print(f"doc_cap: {args.doc_cap:,}")
 print(f"vocab_size: {args.vocab_size:,}")
@@ -30,9 +33,15 @@ def text_iterator():
     1) Flatten the batches into a single iterator
     2) Crop every document to args.doc_cap characters
     3) Break when we've seen args.max_chars characters
+    Supports both upstream (ClimbMix/FinewebEdu) and HF (fineweb-2/por_Latn) datasets.
     """
     nchars = 0
-    for batch in parquets_iter_batched(split="train"):
+    if args.dataset == 'hf':
+        from nanochat.dataset_hf import parquets_iter_batched_hf
+        doc_batches = parquets_iter_batched_hf(split="train")
+    else:
+        doc_batches = parquets_iter_batched(split="train")
+    for batch in doc_batches:
         for doc in batch:
             doc_text = doc
             if len(doc_text) > args.doc_cap:
