@@ -185,6 +185,8 @@ def main():
     parser.add_argument('--device-batch-size', type=int, default=32, help='Per-device batch size for BPB evaluation')
     parser.add_argument('--split-tokens', type=int, default=40*524288, help='Number of tokens to evaluate per split for BPB')
     parser.add_argument('--device-type', type=str, default='', help='cuda|cpu|mps (empty = autodetect)')
+    parser.add_argument('--dataset', type=str, default='upstream', choices=['upstream', 'hf'],
+                        help='Dataset for BPB evaluation: upstream (default) or hf (fineweb-2/por_Latn)')
     args = parser.parse_args()
 
     # Parse evaluation modes
@@ -262,6 +264,13 @@ def main():
         print0("\n" + "="*80)
         print0("BPB Evaluation")
         print0("="*80)
+        if args.dataset == 'hf':
+            from nanochat.dataset_hf import DATA_DIR_HF
+            _data_dir = DATA_DIR_HF
+            print0(f"BPB dataset: HF fineweb-2/por_Latn  ({_data_dir})")
+        else:
+            _data_dir = None
+            print0("BPB dataset: upstream (ClimbMix / FinewebEdu)")
         tokens_per_step = args.device_batch_size * sequence_len * ddp_world_size
         if args.split_tokens % tokens_per_step != 0:
             # Adjust to nearest multiple
@@ -270,7 +279,7 @@ def main():
         steps = args.split_tokens // tokens_per_step
 
         for split_name in ["train", "val"]:
-            loader = tokenizing_distributed_data_loader_bos_bestfit(tokenizer, args.device_batch_size, sequence_len, split_name, device=device)
+            loader = tokenizing_distributed_data_loader_bos_bestfit(tokenizer, args.device_batch_size, sequence_len, split_name, device=device, data_dir=_data_dir)
             bpb = evaluate_bpb(model, loader, steps, token_bytes)
             bpb_results[split_name] = bpb
             print0(f"{split_name} bpb: {bpb:.6f}")
