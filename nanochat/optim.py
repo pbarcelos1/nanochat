@@ -10,7 +10,7 @@ Further contributions from @karpathy and @chrisjmccormick.
 import torch
 import torch.distributed as dist
 from torch import Tensor
-from nanochat.common import COMPUTE_DTYPE
+from nanochat.common import COMPUTE_DTYPE, get_dist_info
 
 # -----------------------------------------------------------------------------
 """
@@ -533,3 +533,54 @@ class DistMuonAdamW(torch.optim.Optimizer):
 
         # Phase 3: wait for gathers, copy back
         self._finish_gathers(gather_list)
+
+
+# -----------------------------------------------------------------------------
+# AdamW-only optimizer (no Muon) — for ablation / single-GPU academic use.
+# Muon is well-understood to help on 8×H100 speedruns, but it requires Newton-Schulz
+# orthogonalization that adds conceptual complexity when defending design choices.
+# AdamW-only is the simpler, well-understood baseline.
+
+def build_adamw_only_optimizer(model, unembedding_lr=0.004, embedding_lr=0.2,
+                                matrix_lr=0.02, weight_decay=0.0, scalar_lr=0.5):
+    """
+    AdamW-only alternative to GPT.setup_optimizer.
+
+    All seven param groups use kind='adamw'.  The six non-matrix groups are
+    identical to setup_optimizer's AdamW groups.  Matrix params (transformer.h)
+    get betas=(0.95, 0.9) to mirror Muon's momentum/beta2 defaults.
+
+    Returns the same MuonAdamW / DistMuonAdamW object — those optimizers handle
+    all-AdamW param_groups just fine; the Muon code path is simply never reached.
+    """
+    model_dim = model.config.n_embd
+    ddp, rank, local_rank, world_size = get_dist_info()
+
+    matrix_params       = list(model.transformer.h.parameters())
+    value_embeds_params = list(model.value_embeds.parameters())
+    embedding_params    = list(model.transformer.wte.parameters())
+    lm_head_params      = list(model.lm_head.parameters())
+    resid_params        = [model.resid_lambdas]
+    x0_params           = [model.x0_lambdas]
+    smear_params        = [model.smear_gate.weight, model.smear_lambda, model.backout_lambda]
+
+    # Mirror dmodel LR scaling from setup_optimizer (tuned for 768-dim reference model)
+    dmodel_lr_scale = (model_dim / 768) ** -0.5
+
+    param_groups = [
+        # These six groups are verbatim copies of setup_optimizer's AdamW groups
+        dict(kind='adamw', params=lm_head_params,      lr=unembedding_lr * dmodel_lr_scale, betas=(0.8, 0.96),  eps=1e-10, weight_decay=0.01),
+        dict(kind='adamw', params=embedding_params,    lr=embedding_lr   * dmodel_lr_scale, betas=(0.8, 0.995), eps=1e-10, weight_decay=0.001),
+        dict(kind='adamw', params=value_embeds_params, lr=embedding_lr   * dmodel_lr_scale * 0.5, betas=(0.8, 0.995), eps=1e-10, weight_decay=0.01),
+        dict(kind='adamw', params=resid_params,        lr=scalar_lr * 0.01,                 betas=(0.8, 0.95),  eps=1e-10, weight_decay=0.05),
+        dict(kind='adamw', params=x0_params,           lr=scalar_lr,                        betas=(0.96, 0.95), eps=1e-10, weight_decay=0.0),
+        dict(kind='adamw', params=smear_params,        lr=0.2,                              betas=(0.8, 0.95),  eps=1e-10, weight_decay=0.0),
+        # Matrix weights as AdamW — betas match Muon's momentum (0.95) and beta2 (0.9)
+        dict(kind='adamw', params=matrix_params,       lr=matrix_lr * dmodel_lr_scale,      betas=(0.95, 0.9),  eps=1e-10, weight_decay=weight_decay),
+    ]
+
+    Factory   = DistMuonAdamW if ddp else MuonAdamW
+    optimizer = Factory(param_groups)
+    for group in optimizer.param_groups:
+        group["initial_lr"] = group["lr"]
+    return optimizer
