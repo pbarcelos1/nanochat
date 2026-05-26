@@ -248,6 +248,10 @@ def disable_fp8(model):
 # Compile the model
 
 orig_model = model # original, uncompiled model, for saving raw model state_dict and for inference/evaluation (because the shapes may change shape)
+# Raise dynamo's recompile cache limit: evaluate_bpb calls model(x, y, loss_reduction='none')
+# while training uses model(x, y), and train/eval mode switches each count as separate entries.
+# The default limit of 8 is exhausted before the first training step completes.
+torch._dynamo.config.cache_size_limit = 64
 model = torch.compile(model, dynamic=False) # the inputs to model will never change shape so dynamic=False is safe
 
 # -----------------------------------------------------------------------------
