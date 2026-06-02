@@ -63,3 +63,41 @@ def evaluate_bpb(model, batches, steps, token_bytes):
         return float('inf')
     bpb = total_nats / (math.log(2) * total_bytes)
     return bpb
+
+
+@torch.no_grad()
+def evaluate_perplexity(model, batches, steps, token_bytes):
+    """
+    Compute perplexity = exp(mean cross-entropy loss per token), excluding special tokens.
+    token_bytes is a 1D tensor of shape (vocab_size,); tokens with 0 bytes are special and excluded.
+    """
+    total_nats = torch.tensor(0.0, dtype=torch.float32, device=model.get_device())
+    total_tokens = torch.tensor(0, dtype=torch.int64, device=model.get_device())
+    batch_iter = iter(batches)
+    for _ in range(steps):
+        x, y = next(batch_iter)
+        loss2d = model(x, y, loss_reduction='none')  # (B, T)
+        loss2d = loss2d.view(-1)
+        y = y.view(-1)
+        if (y.int() < 0).any():
+            valid = y >= 0
+            y_safe = torch.where(valid, y, torch.zeros_like(y))
+            num_bytes2d = torch.where(
+                valid,
+                token_bytes[y_safe],
+                torch.zeros_like(y, dtype=token_bytes.dtype)
+            )
+            mask = num_bytes2d > 0
+        else:
+            mask = token_bytes[y] > 0
+        total_nats += (loss2d * mask).sum()
+        total_tokens += mask.sum()
+    world_size = dist.get_world_size() if dist.is_initialized() else 1
+    if world_size > 1:
+        dist.all_reduce(total_nats, op=dist.ReduceOp.SUM)
+        dist.all_reduce(total_tokens, op=dist.ReduceOp.SUM)
+    total_nats = total_nats.item()
+    total_tokens = total_tokens.item()
+    if total_tokens == 0:
+        return float('inf')
+    return math.exp(total_nats / total_tokens)
