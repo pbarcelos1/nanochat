@@ -1,0 +1,80 @@
+2026-05-27 10:40:13,615 - nanochat.common - [32m[1mINFO[0m - Distributed world size: 1
+2026-05-27 10:40:13,615 - nanochat.checkpoint_manager - [32m[1mINFO[0m - No model tag provided, guessing model tag: d12
+2026-05-27 10:40:13,616 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Loading model from /mnt/E-SSD/barcelos/.cache/nanochat/base_checkpoints/d12 with step 4830
+2026-05-27 10:40:14,342 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Building model with config: {'sequence_len': 2048, 'vocab_size': 32768, 'n_layer': 12, 'n_head': 6, 'n_kv_head': 6, 'n_embd': 768, 'window_pattern': 'L'}
+Autodetected device type: cuda
+Evaluating model: base_model (step 4830)
+Eval modes: bpb, sample
+
+================================================================================
+Model Samples
+================================================================================
+
+Conditioned samples:
+--------------------------------------------------------------------------------
+<|bos|>The capital of France is a great writing for the world. The capital of France is a great
+--------------------------------------------------------------------------------
+<|bos|>The chemical symbol of gold is a very important thing for the chemicals. It is a very
+--------------------------------------------------------------------------------
+<|bos|>If yesterday was Friday, then tomorrow will be a little bit of the day. I will be a little bit of
+--------------------------------------------------------------------------------
+<|bos|>The opposite of hot is a great opposite of the city. The opposite of hot is
+--------------------------------------------------------------------------------
+<|bos|>The planets of the solar system are: the planets of the solar system. The planets of the solar system.
+--------------------------------------------------------------------------------
+<|bos|>My favorite color is a very nice and very comfortable. It is a very n
+--------------------------------------------------------------------------------
+<|bos|>If 5*x + 3 = 13, then x is 5*x + 3 = 13, then x is 
+
+Unconditioned samples:
+--------------------------------------------------------------------------------
+<|bos|>Julho de 2014
+Alterações na regulamentação da exploração de gás natural
+No ano de 2014, foi publicada a Resolução nº 33.222/2014 do CONSANDA (Consórcio Brasileiro de Energia Renovável), que estabelece as diretrizes, prazos, objetivos e condições presentes em relação ao registro de pequeno escritório no Edifício Sede, desde 2001, independente de pertencer a uma nova categoria que está de posse empresa.
+Assim, o registro de pequeno escritório é a modalidade do serviço, e de como ele se encontra distribuído legalmente, por meio de vincular-se a uma nova categoria que não é usualmente
+--------------------------------------------------------------------------------
+<|bos|>- Criar Conta
+- 22 de setembro de 2019
+- Aviso de Formação
+- Detalhes
+- Categoria
+-
+- Visualizações
+- 185 No Brasil, a pesquisa Flexibilizar é a única iniciativa de 100 pessoas e 25% de funcionários são apaixonados pelo trabalho.
+- O Software “100 para o Mundo” é uma das principais ações que tem como foco conscientizar as pessoas sobre práticas que evitem mais de uma vez por mês. Conheça o software “100 para o Mundo”!
+DIOLITE SEUS PRÓPRIOS FUNDAMENTOS
+A medicina tradicional chinesa consiste num sistema
+--------------------------------------------------------------------------------
+<|bos|>A monitoração do vírus tipo l (Zhokromus latus) através do sistema imunizado do intestino delgado vai mascarar os sintomas e a evolução dos mesmos, nomeadamente do medo.
+A INTRODUÇÃO
+O atraso no tratamento da doença e de consequências de longo prazo da mesma, serão responsáveis por agravar e por disseminar a evolução da infecção.
+Litused infused applied clinical significances, toproving la control Trial circule, that should be able to prevent the tnascorized HIV, from severe analyzes relates to prevent teacon as
+--------------------------------------------------------------------------------
+<|bos|>Animati 860 de uma sessão de beleza de um remédio antibacteriano assim teve um mercado virtual que promete ajudar a incentivar a proliferação celular através da prevenção e aumentada. O cachorro é um boquirroto e têm de ter tantas condições de saúde por isso o bairro era o lugar do canário. Um dia de cão: um sucesso. Bebês são realidades.
+A Federação Internacional de Cães (IDC) Canadense presenteiam 14 mil adotantes no Harbour Gradington, Flórida (EUA), para a campanha Outubro Rosa. O Hudson Zbig Official Bill um Cordeiro gelado, que
+--------------------------------------------------------------------------------
+<|bos|>Mineiro se destaca em títulos no Flamengo de Lagoa Grande (Foto: Site Oficial)
+Medida destinada a homenagear o homem que foi amigo da família
+O mineiro Gaúcho, de 36 anos, deixou um legado positivo tático no Flamengo. Depois de muitos triunfos, a dona de casa Olavo Diegues lançou oficialmente seu nome para o banco de reservas. Em forte atuação, Alessandro Del Piero confessou a paixão por ele. O treinador da equipe rubro-negra, Alessandro Del Piero, integrava o elenco do Fla de Lagoa Grande. Ele foi treinador dos cariocas nos anos seguintes, quando ainda atuava como técnico e se
+--------------------------------------------------------------------------------
+<|bos|>O Galaxy Note 10 e o iPhone 4 serão apresentados após os testes em humanos. Confira agora detalhes sobre: o novo flagship
+No começo desta semana tivemos uma novidade boa que foi a presença de um painel frontal. O design geral do Galaxy Note 10 foi o conhecido painel mudei aqui para o lado direito temos o botão Power Outside que informa no começo do painel assim como no jack de 10 polegadas.
+O novo Note 10 tem aparência semelhante ao Note 10 nacional, 4GB de memória RAM e 32 GB de armazenamento interno, no entanto, o Galaxy S10 tem até 8 GB de
+--------------------------------------------------------------------------------
+<|bos|>O governador Cid Gomes participou hoje (9) de audiência pública para definir o modelo financeiro do Samambaia Viva, que servirá de base para projetos relacionados à habitação. Cid Gomes já havia pensado em várias propostas para a cidade, entre elas a ampliação do abastecimento de água, a criação de unidades móveis de saúde, a criação de um supersalário, tudo que um cidadão precisa para se tornar bem atendido em qualquer tipo de demanda do município.
+“Esse Estado é essencial para a população, para garantir a saúde do povo daqui. Os dois, só juntos, podemos resolver essa questão. Respeito esse modelo e trouxe sugestões, graças ao
+--------------------------------------------------------------------------------
+<|bos|>Nesse post vamos mostrar em detalhes como colocar os itens em um carrinho para saber exatamente o que mais vale para um projeto!
+Categoria: Design.
+Formas de decoração para decorar acordo com as decorações
+Há muitas formas de enfeitar o quarto das crianças e os móveis variam, consulte com profissionais especialistas.
+Hoje é um dia de Dia das Crianças, branco, amarelo, azul, verde e vermelho. Confira quais são as principais cores e como encontrar a decoração perfeita para a sua casa.
+Veja quais pinturas, lustres, pendentes, outros objetos decorativos e muito mais. Confira e comprove.
+Confira algumas principais tendências para decorar a sua casa com a decoração
+
+================================================================================
+BPB Evaluation
+================================================================================
+BPB dataset: HF fineweb-2/por_Latn  (/mnt/E-SSD/barcelos/.cache/nanochat/data_fineweb2_pt)
+train bpb: 0.981163
+val bpb: 0.946619
