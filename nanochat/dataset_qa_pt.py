@@ -307,6 +307,90 @@ def dataloader_qa_pt(data_dir, split, B, T, device, resume_state_dict=None):
 
 
 # ---------------------------------------------------------------------------
+# Dataloader for SFT (Etapa 3) — same parquet shards with per-token loss mask
+# ---------------------------------------------------------------------------
+
+def dataloader_qa_pt_sft(data_dir, split, B, T, device, tokenizer, resume_state_dict=None):
+    """
+    Yields (inputs[B,T], targets[B,T], state_dict) for SFT (Etapa 3).
+
+    Identical to dataloader_qa_pt except that targets has -1 (ignore_index)
+    for all non-assistant positions.  The mask is derived from special token
+    IDs by scanning each packed block; in_assistant state is carried across
+    block boundaries so conversations split at a cut are masked correctly.
+
+    Mask rules (aligned with tokenizer.render_conversation):
+      <|assistant_start|>  → mask=0  (start token itself is not supervised)
+      assistant text       → mask=1  (model learns to generate the response)
+      <|assistant_end|>    → mask=1  (model learns to terminate the response)
+      everything else      → mask=0  (user turn, BOS, structure tokens)
+
+    split="train" → all shards except the last.
+    split="val"   → last shard only (same held-out set as mid-training eval).
+    """
+    asst_start_id = tokenizer.encode_special("<|assistant_start|>")
+    asst_end_id   = tokenizer.encode_special("<|assistant_end|>")
+
+    assert split in {"train", "val"}, f"Unknown split: {split}"
+    all_paths = list_parquet_files_qa_pt(data_dir)
+    paths = all_paths[:-1] if split == "train" else all_paths[-1:]
+    assert paths, f"No {split} shards found in {data_dir}"
+
+    resume_pq_idx = resume_state_dict.get("pq_idx", 0) if resume_state_dict else 0
+    resume_rg_idx = resume_state_dict.get("rg_idx", None) if resume_state_dict else None
+    epoch         = resume_state_dict.get("epoch",  1)    if resume_state_dict else 1
+    first_pass    = True
+    block_batch:  list = []
+    mask_batch:   list = []
+    in_assistant        = False  # cross-block state for mask reconstruction
+
+    while True:
+        for pq_i, filepath in enumerate(paths):
+            if first_pass and pq_i < resume_pq_idx:
+                continue
+            pf = pq.ParquetFile(filepath)
+            if first_pass and resume_rg_idx is not None and pq_i == resume_pq_idx:
+                rg_start      = resume_rg_idx + 1
+                resume_rg_idx = None
+            else:
+                rg_start = 0
+            for rg_i in range(rg_start, pf.num_row_groups):
+                rg     = pf.read_row_group(rg_i)
+                blocks = rg.column("ids").to_pylist()
+                for block in blocks:
+                    if len(block) != T + 1:
+                        continue
+                    # Build per-token mask by scanning for special tokens.
+                    # in_assistant is carried across block boundaries.
+                    mask = []
+                    for tok_id in block:
+                        if tok_id == asst_start_id:
+                            in_assistant = True
+                            mask.append(0)   # start token not supervised
+                        elif tok_id == asst_end_id:
+                            in_assistant = False
+                            mask.append(1)   # end token IS supervised
+                        else:
+                            mask.append(1 if in_assistant else 0)
+                    block_batch.append(block)
+                    mask_batch.append(mask)
+                    if len(block_batch) >= B:
+                        arr      = torch.tensor(block_batch[:B], dtype=torch.long)
+                        mask_arr = torch.tensor(mask_batch[:B],  dtype=torch.int8)
+                        block_batch = block_batch[B:]
+                        mask_batch  = mask_batch[B:]
+                        x = arr[:, :-1].to(device=device, dtype=torch.int32).contiguous()
+                        y = arr[:, 1:].to(device=device,  dtype=torch.int64).contiguous()
+                        # Shift mask by 1 to align with targets, then apply ignore_index
+                        mask_t = mask_arr[:, 1:].to(device=device)
+                        y[mask_t == 0] = -1
+                        yield x, y, {"pq_idx": pq_i, "rg_idx": rg_i, "epoch": epoch}
+        first_pass   = False
+        epoch       += 1
+        in_assistant = False  # reset at epoch boundary (shard 0, block 0 = start of user turn)
+
+
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
