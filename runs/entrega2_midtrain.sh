@@ -25,7 +25,7 @@ set -euo pipefail
 
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-3}"
 export OMP_NUM_THREADS=1
-export NANOCHAT_BASE_DIR="${NANOCHAT_BASE_DIR:-/mnt/E-SSD/barcelos/.cache/nanochat}"
+export NANOCHAT_BASE_DIR="/mnt/E-SSD/barcelos/.cache/nanochat"
 mkdir -p "$NANOCHAT_BASE_DIR"
 mkdir -p logs
 
