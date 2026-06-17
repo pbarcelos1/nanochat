@@ -19,18 +19,53 @@ import torch
 import torch.nn.functional as F
 
 
-def compute_perplexity(checkpoint, val_split="por_Latn"):
+def compute_perplexity(checkpoint, val_split="por_Latn", device_batch_size=8, eval_tokens=10_485_760):
     """
-    Compute perplexity of `checkpoint` on `val_split`.
+    Compute perplexity of `checkpoint` on the pre-training validation split.
 
     Args:
-        checkpoint: str — checkpoint tag (e.g. "d12_sft")
-        val_split:  str — validation split identifier
+        checkpoint:        str — checkpoint tag (e.g. "d12", "d12_midtrain", "d12_sft")
+        val_split:         str — currently only "por_Latn" (fineweb-2 Portuguese)
+        device_batch_size: int — micro-batch size for evaluation
+        eval_tokens:       int — number of tokens to evaluate over (~10M default)
 
     Returns:
-        float — perplexity
+        float — perplexity = exp(mean cross-entropy per non-special token)
     """
-    raise NotImplementedError("Etapa 4")
+    from nanochat.common import get_base_dir, autodetect_device_type
+    from nanochat.checkpoint_manager import load_model
+    from nanochat.tokenizer import get_token_bytes
+    from nanochat.dataloader import tokenizing_distributed_data_loader_bos_bestfit
+    from nanochat.loss_eval import evaluate_perplexity as _eval_ppl
+    from nanochat.dataset_hf import DATA_DIR_HF
+
+    device_type = autodetect_device_type()
+    device = torch.device("cuda" if device_type == "cuda" else "cpu")
+
+    print(f"[ppl] checkpoint={checkpoint}  val_split={val_split}  device={device}", flush=True)
+
+    model, tokenizer, meta = load_model(
+        "base", device, phase="eval", model_tag=checkpoint
+    )
+    model.eval()
+
+    sequence_len = meta["model_config"]["sequence_len"]
+    token_bytes  = get_token_bytes(device=device)
+
+    tokens_per_step = device_batch_size * sequence_len
+    eval_steps      = max(1, eval_tokens // tokens_per_step)
+    print(f"[ppl] seq_len={sequence_len}  eval_steps={eval_steps}", flush=True)
+
+    val_loader = tokenizing_distributed_data_loader_bos_bestfit(
+        tokenizer, device_batch_size, sequence_len, "val",
+        device=device, data_dir=DATA_DIR_HF,
+    )
+
+    with torch.no_grad():
+        ppl = _eval_ppl(model, val_loader, eval_steps, token_bytes)
+
+    print(f"[ppl] result={ppl:.2f}", flush=True)
+    return ppl
 
 
 # ---------------------------------------------------------------------------
