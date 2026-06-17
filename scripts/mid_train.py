@@ -49,7 +49,7 @@ from nanochat.tokenizer import get_tokenizer, get_token_bytes
 from nanochat.checkpoint_manager import (
     save_checkpoint, load_checkpoint, find_last_step,
 )
-from nanochat.loss_eval import evaluate_bpb
+from nanochat.loss_eval import evaluate_bpb, evaluate_perplexity
 from nanochat.engine import Engine
 from nanochat.flash_attention import HAS_FA3
 print_banner()
@@ -321,14 +321,18 @@ def get_lr_multiplier(it):
 if not resuming:
     step               = 0
     val_bpb            = None
+    val_ppl            = None
     min_val_bpb        = float("inf")
+    min_val_ppl        = float("inf")
     smooth_train_loss  = 0.0
     total_training_time = 0.0
 else:
     step               = meta_data["step"]
     loop_state         = meta_data["loop_state"]
     val_bpb            = meta_data.get("val_bpb")
+    val_ppl            = meta_data.get("val_ppl")
     min_val_bpb        = loop_state["min_val_bpb"]
+    min_val_ppl        = loop_state.get("min_val_ppl", float("inf"))
     smooth_train_loss  = loop_state["smooth_train_loss"]
     total_training_time = loop_state["total_training_time"]
 
@@ -341,19 +345,22 @@ while True:
     last_step = (step == num_iterations)
     flops_so_far = num_flops_per_token * args.total_batch_size * step
 
-    # ---- validation bpb ----
+    # ---- validation bpb + perplexity ----
     if args.eval_every > 0 and (last_step or step % args.eval_every == 0):
         model.eval()
         val_bpb = evaluate_bpb(model, build_val_loader(), eval_steps, token_bytes)
-        val_ppl = math.exp(val_bpb * math.log(2) * 4.0)  # approximate PPL (4 bytes/token avg)
-        print0(f"step {step:05d} | val bpb: {val_bpb:.6f}")
+        val_ppl = evaluate_perplexity(model, build_val_loader(), eval_steps, token_bytes)
+        print0(f"step {step:05d} | val bpb: {val_bpb:.6f} | val ppl: {val_ppl:.2f}")
         if val_bpb < min_val_bpb:
             min_val_bpb = val_bpb
+        if val_ppl < min_val_ppl:
+            min_val_ppl = val_ppl
         wandb_run.log({
             "step":                 step,
             "total_training_flops": flops_so_far,
             "total_training_time":  total_training_time,
             "val/bpb":              val_bpb,
+            "val/ppl":              val_ppl,
         })
         model.train()
 
@@ -378,8 +385,10 @@ while True:
                 "max_seq_len":           args.max_seq_len,
                 "total_batch_size":      args.total_batch_size,
                 "dataloader_state_dict": dataloader_state_dict,
+                "val_ppl":               val_ppl,
                 "loop_state": {
                     "min_val_bpb":         min_val_bpb,
+                    "min_val_ppl":         min_val_ppl,
                     "smooth_train_loss":   smooth_train_loss,
                     "total_training_time": total_training_time,
                 },
@@ -473,6 +482,8 @@ print0(f"Peak memory     : {get_max_memory() / 1024 / 1024:.2f} MiB")
 print0(f"Total train time: {total_training_time / 60:.2f} m")
 if val_bpb is not None:
     print0(f"Min val bpb     : {min_val_bpb:.6f}")
+if val_ppl is not None:
+    print0(f"Min val ppl     : {min_val_ppl:.2f}")
 
 wandb_run.finish()
 compute_cleanup()
