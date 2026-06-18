@@ -108,6 +108,11 @@ streamlit run scripts/chat_streamlit.py -- --model-tag d12_sft
 A sidebar expõe controles de geração: temperatura (0–2), top-k (0–200) e comprimento máximo (32–1024 tokens). O modelo é carregado uma vez e cacheado na sessão.
 
 > Para usar via linha de comando em vez de navegador: `python -m scripts.chat_cli`
+ 
+(Se modelo não estiver salvo na máquina rodar)
+```bash
+python scripts/download_hf.py
+```
 
 ---
 
